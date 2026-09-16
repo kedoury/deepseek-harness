@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import * as yaml from 'js-yaml'
@@ -1136,6 +1136,39 @@ describe('Git hooks', () => {
 
       expect(pairing).toMatchObject({ exclude: ['.agents/notes/archived/**'] })
     }
+  })
+
+  // Hook commands execute on the contributor's host, where Git for Windows
+  // supplies `sh` but not necessarily a resolvable `bash`; a `#!`-relative
+  // interpreter would fail every commit there instead of checking the change.
+  it('runs every hook job through an interpreter the contributor host already has', () => {
+    const lefthook = loadWorkflow('lefthook.yml')
+
+    for (const hookName of ['pre-commit', 'pre-merge-commit', 'pre-push']) {
+      const hook = lefthook[hookName]
+      if (!isRecord(hook) || !Array.isArray(hook.jobs)) {
+        throw new TypeError(`lefthook must define ${hookName} jobs`)
+      }
+      for (const job of hook.jobs) {
+        if (!isRecord(job) || typeof job.run !== 'string') {
+          throw new TypeError(`${hookName} jobs must define a run command`)
+        }
+        expect(job.run, `${hookName} job ${String(job.name)}`).not.toMatch(/\.sh(?:\s|$)/)
+      }
+    }
+  })
+
+  it('checks the vendor manifest through the tsx guard', () => {
+    const hook = loadWorkflow('lefthook.yml')['pre-commit']
+    if (!isRecord(hook) || !Array.isArray(hook.jobs)) {
+      throw new TypeError('lefthook must define pre-commit jobs')
+    }
+    const guard: unknown = hook.jobs.find(
+      (job: unknown) => isRecord(job) && job.name === 'vendor manifest guard',
+    )
+
+    expect(guard).toMatchObject({ run: 'node_modules/.bin/tsx scripts/check-vendor-manifest.ts' })
+    expect(existsSync(resolve(root, 'scripts/check-vendor-manifest.sh'))).toBe(false)
   })
 })
 

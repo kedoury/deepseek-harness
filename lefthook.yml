@@ -34,8 +34,11 @@ pre-commit:
     - name: whitespace (staged)
       run: git diff --cached --check
 
+    # Runs through tsx: lefthook executes hook commands on the contributor's
+    # host, where Git for Windows supplies `sh` but not necessarily a
+    # resolvable `bash` for a script's `#!/usr/bin/env bash` shebang.
     - name: vendor manifest guard
-      run: scripts/check-vendor-manifest.sh
+      run: node_modules/.bin/tsx scripts/check-vendor-manifest.ts
 
 pre-merge-commit:
   jobs:
