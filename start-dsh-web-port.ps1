@@ -15,8 +15,10 @@ function Get-ProcessRecord([int]$ProcessId) {
 
 function Test-DshCommandLine([string]$CommandLine) {
   if ([string]::IsNullOrWhiteSpace($CommandLine)) { return $false }
-  if ($CommandLine -match 'apps\\cli\\src\\bin\.ts') { return $true }
-  if ($CommandLine -match 'apps\\cli\\lib\\bin\.js') { return $true }
+  # Accept both separators: Node reports the entry path with forward slashes when the
+  # process was launched through pnpm, and with backslashes when launched by the .cmd.
+  if ($CommandLine -match 'apps[\\/]cli[\\/]src[\\/]bin\.ts') { return $true }
+  if ($CommandLine -match 'apps[\\/]cli[\\/]lib[\\/]bin\.js') { return $true }
   if ($CommandLine -match '\bdsh\b' -and $CommandLine -match '\bweb\b') { return $true }
   return $false
 }

@@ -37,7 +37,10 @@ if not exist "node_modules\" (
   )
 )
 
-if not exist "apps\web\dist\index.html" (
+set "DSH_NEED_BUILD="
+if not exist "apps\web\dist\index.html" set "DSH_NEED_BUILD=1"
+if not exist "apps\cli\lib\bin.js" set "DSH_NEED_BUILD=1"
+if defined DSH_NEED_BUILD (
   echo Building, first run may take a few minutes...
   call pnpm run build
   if errorlevel 1 (
@@ -58,7 +61,11 @@ if not defined DSH_PORT (
 echo Starting DeepSeek Harness Web UI on port %DSH_PORT%...
 echo Browser will open automatically. Close this window to stop.
 echo.
-call pnpm dsh web --port %DSH_PORT%
+rem Launch the built CLI, matching the documented "installed form". `pnpm dsh` boots the
+rem source tree through tsx instead, which loads workspace packages from both src/ and lib/
+rem in one process; the duplicated TOOL_RUNTIME_SCHEDULER symbol then makes every tool call
+rem fail with "Cannot read properties of undefined (reading 'prepare')".
+node "apps\cli\lib\bin.js" web --port %DSH_PORT%
 echo.
 echo Server stopped.
 pause
